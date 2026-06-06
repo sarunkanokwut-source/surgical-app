@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useLocalStorage, generateId } from '../hooks/useLocalStorage'
-import { Plus, ChevronDown, ChevronUp, Check, Trash2, X, Pencil } from 'lucide-react'
+import { Plus, ChevronDown, ChevronUp, Check, Trash2, X, Pencil, ArrowUpDown, MoveUp, MoveDown } from 'lucide-react'
 
 const DEFAULT_TASKS = ['Bloods', 'Imaging', 'Consult', 'Discharge', 'Script', 'Referral', 'IX', 'Review']
 
 // ─── Patient Card ────────────────────────────────────────────────────────────
 
-function PatientCard({ patient, onUpdate, onDelete }) {
+function PatientCard({ patient, onUpdate, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
   const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({})
   const [newTask, setNewTask] = useState('')
 
   const toggleSeen = () => onUpdate({ ...patient, seen: !patient.seen })
@@ -19,6 +21,18 @@ function PatientCard({ patient, onUpdate, onDelete }) {
   }
   const removeTask = (tid) => onUpdate({ ...patient, tasks: patient.tasks.filter(t => t.id !== tid) })
   const doneTasks = patient.tasks.filter(t => t.done).length
+
+  const startEdit = (e) => {
+    e.stopPropagation()
+    setEditForm({ name: patient.name, bed: patient.bed, diagnosis: patient.diagnosis || '', service: patient.service || '' })
+    setEditing(true)
+    if (!expanded) setExpanded(true)
+  }
+  const saveEdit = () => {
+    if (!editForm.name.trim() || !editForm.bed.trim()) return
+    onUpdate({ ...patient, ...editForm })
+    setEditing(false)
+  }
 
   return (
     <div className={`bg-white rounded-xl shadow-sm border-l-4 mb-3 overflow-hidden ${patient.seen ? 'border-green-400' : 'border-blue-500'}`}>
@@ -35,8 +49,9 @@ function PatientCard({ patient, onUpdate, onDelete }) {
           <p className="text-xs text-gray-500 truncate">{patient.diagnosis || 'No diagnosis'}</p>
           {patient.service && <p className="text-xs text-indigo-500 font-medium truncate">{patient.service}</p>}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">{doneTasks}/{patient.tasks.length}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400 mr-1">{doneTasks}/{patient.tasks.length}</span>
+          <button onClick={startEdit} className="text-gray-300 hover:text-blue-400 p-1"><Pencil size={14} /></button>
           <button onClick={() => setExpanded(!expanded)} className="text-gray-400 p-1">
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -45,6 +60,40 @@ function PatientCard({ patient, onUpdate, onDelete }) {
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
+
+          {/* Edit patient details */}
+          {editing ? (
+            <div className="space-y-2 p-3 bg-blue-50 rounded-xl">
+              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Edit Patient</p>
+              <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})}
+                placeholder="Name *" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 bg-white" />
+              <input value={editForm.bed} onChange={e => setEditForm({...editForm, bed: e.target.value})}
+                placeholder="Bed / Room *" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 bg-white" />
+              <input value={editForm.diagnosis} onChange={e => setEditForm({...editForm, diagnosis: e.target.value})}
+                placeholder="Diagnosis" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 bg-white" />
+              <input value={editForm.service} onChange={e => setEditForm({...editForm, service: e.target.value})}
+                placeholder="Attending / Service" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 bg-white" />
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setEditing(false)} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 bg-white">Cancel</button>
+                <button onClick={saveEdit} className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">Save</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Move up/down */}
+              <div className="flex gap-2">
+                <button onClick={onMoveUp} disabled={isFirst}
+                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors ${isFirst ? 'text-gray-300 border-gray-100' : 'text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                  <MoveUp size={13} /> Move Up
+                </button>
+                <button onClick={onMoveDown} disabled={isLast}
+                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors ${isLast ? 'text-gray-300 border-gray-100' : 'text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                  <MoveDown size={13} /> Move Down
+                </button>
+              </div>
+            </>
+          )}
+
           <div>
             <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Tasks</p>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -72,12 +121,6 @@ function PatientCard({ patient, onUpdate, onDelete }) {
                 placeholder="Custom task..." className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-blue-400" />
               <button onClick={() => addTask(newTask)} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg">Add</button>
             </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Attending / Service</p>
-            <input value={patient.service || ''} onChange={e => onUpdate({ ...patient, service: e.target.value })}
-              placeholder="e.g. Gen Surgery, Ortho, Vascular" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400" />
           </div>
 
           <div>
@@ -150,8 +193,29 @@ function WardNameModal({ initial, title, onConfirm, onClose }) {
 
 // ─── Ward View (single ward's patient list) ───────────────────────────────────
 
+const SORT_OPTIONS = [
+  { key: 'manual',  label: 'Manual' },
+  { key: 'bed',     label: 'Bed' },
+  { key: 'name',    label: 'Name' },
+  { key: 'unseen',  label: 'Unseen first' },
+  { key: 'service', label: 'Service' },
+]
+
+function sortPatients(patients, sort) {
+  if (sort === 'manual') return patients
+  return [...patients].sort((a, b) => {
+    if (sort === 'bed')     return (a.bed || '').localeCompare(b.bed || '', undefined, { numeric: true })
+    if (sort === 'name')    return (a.name || '').localeCompare(b.name || '')
+    if (sort === 'unseen')  return (a.seen === b.seen ? 0 : a.seen ? 1 : -1)
+    if (sort === 'service') return (a.service || '').localeCompare(b.service || '')
+    return 0
+  })
+}
+
 function WardView({ ward, onUpdateWard }) {
   const [showAdd, setShowAdd] = useState(false)
+  const [sort, setSort] = useState('manual')
+  const [showSort, setShowSort] = useState(false)
 
   const patients = ward.patients || []
   const seen = patients.filter(p => p.seen).length
@@ -160,6 +224,18 @@ function WardView({ ward, onUpdateWard }) {
   const deletePatient = (id) => onUpdateWard({ ...ward, patients: patients.filter(p => p.id !== id) })
   const addPatient = (p) => onUpdateWard({ ...ward, patients: [...patients, p] })
   const resetRound = () => onUpdateWard({ ...ward, patients: patients.map(p => ({ ...p, seen: false, tasks: p.tasks.map(t => ({ ...t, done: false })) })) })
+
+  const movePatient = (id, dir) => {
+    const idx = patients.findIndex(p => p.id === id)
+    if (idx === -1) return
+    const next = [...patients]
+    const swap = idx + dir
+    if (swap < 0 || swap >= next.length) return
+    ;[next[idx], next[swap]] = [next[swap], next[idx]]
+    onUpdateWard({ ...ward, patients: next })
+  }
+
+  const displayed = sortPatients(patients, sort)
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
@@ -170,10 +246,29 @@ function WardView({ ward, onUpdateWard }) {
             <div className="bg-blue-500 rounded-full h-1.5 transition-all" style={{ width: patients.length ? `${(seen / patients.length) * 100}%` : '0%' }} />
           </div>
         </div>
-        <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-2 rounded-xl">
-          <Plus size={16} /> Patient
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => setShowSort(!showSort)}
+              className="flex items-center gap-1.5 text-sm border border-gray-200 text-gray-600 px-3 py-2 rounded-xl bg-white">
+              <ArrowUpDown size={14} />
+              {SORT_OPTIONS.find(s => s.key === sort)?.label}
+            </button>
+            {showSort && (
+              <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-gray-100 z-10 min-w-[140px] overflow-hidden">
+                {SORT_OPTIONS.map(s => (
+                  <button key={s.key} onClick={() => { setSort(s.key); setShowSort(false) }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${sort === s.key ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-2 rounded-xl">
+            <Plus size={16} /> Patient
+          </button>
+        </div>
       </div>
 
       {patients.length === 0 ? (
@@ -184,8 +279,11 @@ function WardView({ ward, onUpdateWard }) {
         </div>
       ) : (
         <>
-          {patients.map(p => (
-            <PatientCard key={p.id} patient={p} onUpdate={updatePatient} onDelete={deletePatient} />
+          {displayed.map((p, i) => (
+            <PatientCard key={p.id} patient={p} onUpdate={updatePatient} onDelete={deletePatient}
+              onMoveUp={() => movePatient(p.id, -1)}
+              onMoveDown={() => movePatient(p.id, 1)}
+              isFirst={i === 0} isLast={i === displayed.length - 1} />
           ))}
           <button onClick={resetRound} className="w-full mt-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500">
             Reset round (uncheck all)
