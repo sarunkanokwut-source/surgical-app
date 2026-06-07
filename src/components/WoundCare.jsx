@@ -76,7 +76,11 @@ function WoundCard({ wound, onUpdate, onDelete, wardPatients }) {
             )}
           </div>
           <p className="text-xs text-gray-600">{wound.location}{wound.woundType ? ` — ${wound.woundType}` : ''}</p>
-          {linkedPatient?.service && <p className="text-xs text-indigo-400">{linkedPatient.service}</p>}
+          <div className="flex items-center gap-2 flex-wrap">
+            {wound.ward && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{wound.ward}</span>}
+            {wound.dateOfSurgery && <span className="text-xs text-gray-400">Op: {wound.dateOfSurgery}</span>}
+            {linkedPatient?.service && <span className="text-xs text-indigo-400">{linkedPatient.service}</span>}
+          </div>
           <div className="mt-1 flex items-center gap-2">
             <DueChip wound={wound} />
             <span className="text-xs text-gray-400">{wound.frequencyDays === 1 ? 'Daily' : `Every ${wound.frequencyDays}d`}</span>
@@ -105,6 +109,19 @@ function WoundCard({ wound, onUpdate, onDelete, wardPatients }) {
               </div>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Ward</p>
+              <input value={wound.ward || ''} onChange={e => onUpdate({ ...wound, ward: e.target.value })}
+                placeholder="e.g. 4 West, ICU" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-purple-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Date of surgery</p>
+              <input type="date" value={wound.dateOfSurgery || ''} onChange={e => onUpdate({ ...wound, dateOfSurgery: e.target.value })}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-purple-400" />
+            </div>
+          </div>
 
           <div>
             <p className="text-xs text-gray-500 mb-1">Dressing type</p>
@@ -154,6 +171,7 @@ function WoundCard({ wound, onUpdate, onDelete, wardPatients }) {
 function AddWoundModal({ onAdd, onClose, wardPatients }) {
   const [form, setForm] = useState({
     patientId: '', patientName: '', mrn: '',
+    ward: '', dateOfSurgery: '',
     location: '', woundType: '', dressingType: '',
     frequencyDays: 2, lastDressed: new Date().toISOString().split('T')[0]
   })
@@ -161,7 +179,7 @@ function AddWoundModal({ onAdd, onClose, wardPatients }) {
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const selectPatient = (p) => {
-    setForm(prev => ({ ...prev, patientId: p.id, patientName: p.name, mrn: p.mrn || '' }))
+    setForm(prev => ({ ...prev, patientId: p.id, patientName: p.name, mrn: p.mrn || '', ward: p.wardName || '' }))
     setShowPicker(false)
   }
   const clearPatient = () => f('patientId', '') || f('patientName', '')
@@ -216,6 +234,15 @@ function AddWoundModal({ onAdd, onClose, wardPatients }) {
 
         <input value={form.mrn} onChange={e => f('mrn', e.target.value)}
           placeholder="MRN / UR number" className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-400" />
+        <div className="flex gap-3">
+          <input value={form.ward} onChange={e => f('ward', e.target.value)}
+            placeholder="Ward (e.g. 4 West, ICU)" className="flex-1 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-400" />
+          <div className="flex-1">
+            <p className="text-xs text-gray-400 mb-1 pl-1">Date of surgery</p>
+            <input type="date" value={form.dateOfSurgery} onChange={e => f('dateOfSurgery', e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-400" />
+          </div>
+        </div>
         <input value={form.location} onChange={e => f('location', e.target.value)}
           placeholder="Wound location * (e.g. Left leg, Abdomen)" className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-400" />
         <input value={form.woundType} onChange={e => f('woundType', e.target.value)}
