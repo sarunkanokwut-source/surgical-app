@@ -54,6 +54,12 @@ docker exec ward-round node --disable-warning=ExperimentalWarning server/create-
 ```
 Put it behind an HTTPS reverse proxy (nginx / Caddy / Cloudflare Tunnel) and set `TRUST_PROXY=1` so the access log records real client IPs.
 
+**Docker Compose with automatic HTTPS (Caddy):** point a domain (e.g. a free `*.duckdns.org` name) at the server, open ports 80 and 443, then:
+```bash
+DOMAIN=wardround.duckdns.org docker compose up -d --build
+docker compose exec app node --disable-warning=ExperimentalWarning server/create-admin.js admin 'a-strong-password' "Dr Admin"
+```
+
 **Without Docker:** `npm ci && npm run build && npm start`, with `DB_PATH` pointing at a persistent location.
 
 ### Environment variables

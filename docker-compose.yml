@@ -1,0 +1,29 @@
+# Usage on a server:  DOMAIN=yourname.duckdns.org docker compose up -d --build
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      - TRUST_PROXY=1
+    volumes:
+      - ward-data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:?Set DOMAIN, e.g. DOMAIN=wardround.duckdns.org}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  ward-data:
+  caddy-data:
+  caddy-config:
